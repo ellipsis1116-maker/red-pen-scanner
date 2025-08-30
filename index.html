@@ -8,31 +8,24 @@
 </head>
 <body>
   <div id="app">
-    <div id="viewport">
-      <video id="video" playsinline autoplay muted></video>
-      <canvas id="overlay"></canvas>
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="overlay"></canvas>
 
-      <div id="hud">
-        <div id="scorePanel">
-          <span id="totalScore">0</span>
-        </div>
-
-        <div id="statusBar">
-          <span id="statusText">初始化中...</span>
-          <span id="fpsText">FPS: --</span>
-        </div>
-
-        <div id="controls">
-          <button id="startBtn">开始识别</button>
-          <button id="orientBtn">横</button>
-          <button id="resetBtn">重置</button>
-        </div>
+    <div id="hud">
+      <div id="scorePanel"><span id="totalScore">0</span></div>
+      <div id="statusBar">
+        <span id="statusText">初始化中...</span>
+        <span id="fpsText">FPS: --</span>
+      </div>
+      <div id="controls">
+        <button id="startBtn">开始识别</button>
+        <button id="orientBtn">横</button>
+        <button id="resetBtn">重置</button>
       </div>
     </div>
 
     <div id="toast" class="toast"></div>
   </div>
-
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>
