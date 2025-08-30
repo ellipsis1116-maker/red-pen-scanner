@@ -4,17 +4,14 @@ let currentDeviceId = null;
 
 const videoEl = document.getElementById('video');
 
-async function initCamera({ facingMode='environment', width=1280, height=720 } = {}) {
+async function initCamera({ facingMode='environment', width=1280, height=720, deviceId } = {}) {
   if (currentStream) {
     currentStream.getTracks().forEach(t => t.stop());
   }
   const constraints = {
     audio: false,
-    video: {
-      width: { ideal: width },
-      height: { ideal: height },
-      facingMode,
-    }
+    video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: width }, height: { ideal: height } }
+                    : { width: { ideal: width }, height: { ideal: height }, facingMode }
   };
   const stream = await navigator.mediaDevices.getUserMedia(constraints);
   currentStream = stream;
@@ -37,7 +34,7 @@ async function switchCamera() {
   if (!cams.length) throw new Error('无可用相机');
   let idx = cams.findIndex(c => c.deviceId === currentDeviceId);
   idx = (idx + 1) % cams.length;
-  return await initCamera({ facingMode: undefined, width: 1280, height: 720, deviceId: cams[idx].deviceId });
+  return await initCamera({ deviceId: cams[idx].deviceId, width: 1280, height: 720 });
 }
 
 async function tryTorch(enabled) {
