@@ -3,12 +3,11 @@ import { parseDetectionsToCanvasSpace } from './util/math.js';
 import { Perf } from './util/perf.js';
 
 /*
-策略：
-- DOM 不旋转。视频与 overlay 始终铺满屏幕（object-fit: cover）
-- 应用模式决定采样方向：
-  - portrait: 将视频采样并“校正到竖向内部基准”，Worker 以竖向帧识别
-  - landscape: 将视频采样并“校正到横向内部基准”，Worker 以横向帧识别
-- 映射回 UI：worker 返回的 frameSize 是内部基准尺寸；统一映射到 overlay 像素
+关键变化：
+- 不旋转像素，不旋转视频；视频始终 cover 填满屏幕
+- 采样时使用 cover 裁剪策略，从 video 抽取与 overlay 尺寸相同的视图
+- 将 frameSize = overlay 像素尺寸，bbox 映射简单线性比例
+- 横/竖模式仅通过 'mode' 传给 worker，用于方向一致性过滤；不改变像素
 */
 export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.json', targetFps=8, getAppMode=()=> 'portrait', onDetections, onFps }) {
   const worker = new Worker(new URL('./worker/worker.js', import.meta.url), { type: 'module' });
@@ -45,7 +44,6 @@ export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.j
     if (!video.videoWidth || !video.videoHeight) {
       await new Promise(res => video.addEventListener('loadedmetadata', res, { once: true }));
     }
-
     running = true;
 
     const loop = async (ts) => {
@@ -57,23 +55,21 @@ export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.j
         const mode = getAppMode() === 'landscape' ? 'landscape' : 'portrait';
         const vw = video.videoWidth, vh = video.videoHeight;
 
-        // 内部基准尺寸：竖向用 640xH，横向用 960xH'
-        const baseW = mode === 'landscape' ? 960 : 640;
-        const baseH = Math.round((vh / vw) * baseW);
+        // 目标采样尺寸 = overlay 尺寸（旋转后的视觉容器大小）
+        const overlay = UI.getOverlayEl();
+        const dw = overlay.width, dh = overlay.height;
+        if (!dw || !dh) { requestAnimationFrame(loop); return; }
 
-        // 为当前模式准备 offscreen
-        if (!offscreen || offscreen.width !== baseW || offscreen.height !== baseH) {
-          offscreen = new OffscreenCanvas(baseW, baseH);
+        if (!offscreen || offscreen.width !== dw || offscreen.height !== dh) {
+          offscreen = new OffscreenCanvas(dw, dh);
         }
         const ctx = offscreen.getContext('2d', { willReadFrequently: true });
         ctx.save();
-        ctx.clearRect(0,0,baseW,baseH);
+        ctx.clearRect(0,0,dw,dh);
 
-        // 将视频画面以 cover 策略缩放剪裁后绘制到内部基准方向
-        // 1) 计算 cover 的源裁剪区域
-        const destW = baseW, destH = baseH;
+        // 计算 cover 裁剪区域（从 video 抽取到 dw x dh）
         const videoAspect = vw / vh;
-        const destAspect = destW / destH;
+        const destAspect = dw / dh;
         let sx, sy, sw, sh;
         if (videoAspect > destAspect) {
           // 视频更宽，裁左右
@@ -88,22 +84,7 @@ export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.j
           sx = 0;
           sy = Math.round((vh - sh) / 2);
         }
-
-        // 2) 按“应用模式”在内部基准方向上绘制
-        if (mode === 'portrait') {
-          // 竖向：直接绘制为 baseW x baseH
-          ctx.drawImage(video, sx, sy, sw, sh, 0, 0, destW, destH);
-        } else {
-          // 横向：将内部基准视口变为“横向认知”，方法一：旋转90度
-          // 这里我们采用：先将目标画布视为横向宽度 destW，且我们需要横向内容
-          // 简单做法：旋转画布坐标系 90°，把长边对齐 X 轴
-          ctx.translate(destW/2, destH/2);
-          ctx.rotate(Math.PI/2); // 顺时针90°
-          // 旋转后，再绘制到 -destH/2..+destH/2 与 -destW/2..+destW/2 区域
-          // 但为了不改变帧尺寸，仍将画面“塞入”原 destW x destH 的像素栅格
-          ctx.drawImage(video, sx, sy, sw, sh, -destH/2, -destW/2, destH, destW);
-        }
-
+        ctx.drawImage(video, sx, sy, sw, sh, 0, 0, dw, dh);
         ctx.restore();
 
         try {
@@ -111,18 +92,18 @@ export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.j
           worker.postMessage({
             type: 'frame',
             bitmap,
-            width: offscreen.width,
-            height: offscreen.height,
-            mode, // portrait/landscape，供 worker 做方向一致性检查
+            width: dw,
+            height: dh,
+            mode, // portrait/landscape
             timestamp: performance.now()
           }, [bitmap]);
         } catch (err) {
-          const imgData = ctx.getImageData(0,0,offscreen.width,offscreen.height);
+          const imgData = ctx.getImageData(0,0,dw,dh);
           worker.postMessage({
             type:'frame-rgb',
             data: imgData.data.buffer,
-            width: offscreen.width,
-            height: offscreen.height,
+            width: dw,
+            height: dh,
             mode,
             timestamp: performance.now()
           }, [imgData.data.buffer]);
