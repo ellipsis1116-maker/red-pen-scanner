@@ -16,6 +16,16 @@ export const UI = (() => {
     applyMode(defaultMode);
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 200));
+    // 有些移动端在地址栏收起/展开时触发视觉 resize，使用定时重采样保险
+    let last = { w:0, h:0 };
+    setInterval(() => {
+      const rect = rotateInner.getBoundingClientRect();
+      if (Math.abs(rect.width - last.w) > 1 || Math.abs(rect.height - last.h) > 1) {
+        last = { w: rect.width, h: rect.height };
+        resizeCanvas();
+      }
+    }, 800);
   }
 
   function applyMode(mode) {
@@ -25,10 +35,12 @@ export const UI = (() => {
   }
 
   function resizeCanvas() {
-    // 根据旋转后的容器尺寸设置 canvas 像素大小
+    // 旋转后的容器尺寸
     const rect = rotateInner.getBoundingClientRect();
-    overlay.width = Math.max(1, Math.round(rect.width));
-    overlay.height = Math.max(1, Math.round(rect.height));
+    const w = Math.max(1, Math.round(rect.width));
+    const h = Math.max(1, Math.round(rect.height));
+    if (overlay.width !== w) overlay.width = w;
+    if (overlay.height !== h) overlay.height = h;
   }
 
   function setStatus(text) { statusEl.textContent = text; }
