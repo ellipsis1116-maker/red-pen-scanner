@@ -2,7 +2,7 @@ import { UI } from './ui.js';
 import { parseDetectionsToCanvasSpace } from './util/math.js';
 import { Perf } from './util/perf.js';
 
-export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.json', targetFps=8, getRotateMode=()=>0, onDetections, onFps }) {
+export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.json', targetFps=8, getOrient=()=> 'landscape', onDetections, onFps }) {
   const worker = new Worker(new URL('./worker/worker.js', import.meta.url), { type: 'module' });
   let running = false;
   let offscreen;
@@ -26,8 +26,6 @@ export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.j
         const dt = now - (lastTick || now);
         if (dt > 0) { perf.push(1000/dt); onFps(perf.avg()); }
       }
-    } else if (msg.type === 'ready') {
-      // UI.setStatus('模型已加载'); // 占位模型也不阻塞
     } else if (msg.type === 'error') {
       console.error('[worker] error', msg.message);
       UI.setStatus('识别出错：' + msg.message);
@@ -42,8 +40,12 @@ export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.j
       await new Promise(res => video.addEventListener('loadedmetadata', res, { once: true }));
     }
 
-    const isLandscape = video.videoWidth >= video.videoHeight;
-    const targetW = isLandscape ? 960 : 640; // 横屏更高采样宽度
+    const videoLandscape = video.videoWidth >= video.videoHeight;
+    const appOrient = getOrient() === 'portrait' ? 'portrait' : 'landscape';
+    const isLandscapeSample = (appOrient === 'landscape');
+
+    // 采样分辨率：横模式更高宽度
+    const targetW = isLandscapeSample ? 960 : 640;
     const w = targetW;
     const h = Math.max(1, Math.round((video.videoHeight / video.videoWidth) * w));
     offscreen = new OffscreenCanvas(w, h);
@@ -56,16 +58,17 @@ export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.j
       if (ts - lastTick >= interval) {
         lastTick = ts;
 
-        // 绘制前根据旋转角度调整
-        const rot = (getRotateMode?.() || 0) % 4; // 0/1/2/3 -> 0/90/180/270
+        const orient = getOrient() === 'portrait' ? 'portrait' : 'landscape';
+        const rotQuarter = orient === 'portrait' ? 1 : 0; // 0deg or 90deg
+
         osctx.save();
         osctx.clearRect(0,0,offscreen.width, offscreen.height);
-        if (rot === 0) {
+        if (rotQuarter === 0) {
           osctx.drawImage(video, 0, 0, offscreen.width, offscreen.height);
         } else {
-          // 旋转采样坐标系
+          // 旋转采样坐标系 90°
           osctx.translate(offscreen.width/2, offscreen.height/2);
-          osctx.rotate(rot * Math.PI/2);
+          osctx.rotate(Math.PI/2);
           const dw = offscreen.width, dh = offscreen.height;
           osctx.drawImage(video, -dw/2, -dh/2, dw, dh);
         }
@@ -73,10 +76,10 @@ export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.j
 
         try {
           const bitmap = await createImageBitmap(offscreen);
-          worker.postMessage({ type: 'frame', bitmap, width: offscreen.width, height: offscreen.height, rotate: rot, timestamp: performance.now() }, [bitmap]);
+          worker.postMessage({ type: 'frame', bitmap, width: offscreen.width, height: offscreen.height, orient, timestamp: performance.now() }, [bitmap]);
         } catch (err) {
           const imgData = osctx.getImageData(0,0,offscreen.width,offscreen.height);
-          worker.postMessage({ type:'frame-rgb', data: imgData.data.buffer, width: offscreen.width, height: offscreen.height, rotate: rot, timestamp: performance.now() }, [imgData.data.buffer]);
+          worker.postMessage({ type:'frame-rgb', data: imgData.data.buffer, width: offscreen.width, height: offscreen.height, orient, timestamp: performance.now() }, [imgData.data.buffer]);
         }
       }
       requestAnimationFrame(loop);
@@ -84,11 +87,7 @@ export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.j
     requestAnimationFrame(loop);
   }
 
-  async function replaceStream(_newStream) {
-    // video 已绑定新流，循环继续采样即可
-  }
-
   function stop() { running = false; }
 
-  return { start, stop, replaceStream, get running() { return running; } };
+  return { start, stop, get running() { return running; } };
 }
