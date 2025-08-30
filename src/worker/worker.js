@@ -17,10 +17,10 @@ self.onmessage = async (e) => {
     if (msg.type === 'frame') {
       const { mask, width, height } = await segmentRed(msg.bitmap);
       const comps = findComponents(mask, width, height);
-      const chains = buildChains(comps);
+      const chains = buildChains(comps, { frameW: width, frameH: height });
       const { input, metas } = await prepareROIs(msg.bitmap, chains, { inputSize: 32 });
       const preds = await inferTFJS(input);
-      const items = composeStrings(chains, preds, metas);
+      const items = composeStrings(chains, preds, metas, { frameW: width, frameH: height });
       const diag = estimateQuality(mask, width, height);
       self.postMessage({ type:'preds', items, diag, frameSize: { w: width, h: height } });
       msg.bitmap.close?.();
@@ -30,10 +30,10 @@ self.onmessage = async (e) => {
     if (msg.type === 'frame-rgb') {
       const { mask, width, height } = segmentRedFromRGBA(msg.data, msg.width, msg.height);
       const comps = findComponents(mask, width, height);
-      const chains = buildChains(comps);
+      const chains = buildChains(comps, { frameW: width, frameH: height });
       const { input, metas } = await prepareROIsFromRGBA(msg.data, width, height, chains, { inputSize: 32 });
       const preds = await inferTFJS(input);
-      const items = composeStrings(chains, preds, metas);
+      const items = composeStrings(chains, preds, metas, { frameW: width, frameH: height });
       const diag = estimateQuality(mask, width, height);
       self.postMessage({ type:'preds', items, diag, frameSize: { w: width, h: height } });
       return;
