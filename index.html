@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>红笔分数采集助手</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app">
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="overlay"></canvas>
+
+    <div id="hud">
+      <div id="scorePanel">
+        <div class="total">总分：<span id="totalScore">0</span></div>
+        <details>
+          <summary>细目</summary>
+          <ul id="breakdown"></ul>
+        </details>
+      </div>
+      <div id="statusBar">
+        <span id="statusText">初始化中...</span>
+        <span id="fpsText">FPS: --</span>
+      </div>
+      <div id="controls">
+        <button id="startBtn">开始识别</button>
+        <button id="switchBtn">切换相机</button>
+        <button id="torchBtn">手电筒</button>
+        <button id="resetBtn">重置</button>
+      </div>
+    </div>
+
+    <div id="flashHint" class="hint">请打开闪光灯以获得最佳效果</div>
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
