@@ -151,20 +151,27 @@
     <div id="cameraPermission" class="fixed inset-0 bg-black bg-opacity-90 flex flex-col justify-center items-center text-white z-40" style="display: none;">
         <div class="text-center max-w-md mx-4">
             <div class="text-6xl mb-4">📸</div>
-            <h2 class="text-2xl font-bold mb-4">需要摄像头权限</h2>
-            <p class="text-gray-300 mb-6">请点击浏览器地址栏的摄像头图标，然后选择"允许"来使用摄像头功能。</p>
-            <div class="text-sm text-gray-400 mb-6">
-                <p>确保您的设备已连接摄像头，并且没有被其他应用占用。</p>
+            <h2 class="text-2xl font-bold mb-4">摄像头访问问题</h2>
+            <p class="text-gray-300 mb-4">请尝试以下步骤：</p>
+            <div class="text-sm text-gray-300 mb-6 text-left">
+                <p>1. 点击浏览器地址栏的摄像头图标</p>
+                <p>2. 选择"允许"摄像头权限</p>
+                <p>3. 确保没有其他应用在使用摄像头</p>
+                <p>4. 刷新页面重新授权</p>
             </div>
-            <div class="flex gap-3">
+            <div class="flex gap-3 mb-4">
                 <button id="retryCamera" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold">
                     重新尝试
+                </button>
+                <button id="testBasicCamera" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg font-bold">
+                    基础测试
                 </button>
                 <button id="demoBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-bold">
                     演示模式
                 </button>
             </div>
-            <div id="errorDetails" class="mt-4 text-sm text-red-300"></div>
+            <div id="debugInfo" class="text-xs text-gray-400 mb-2"></div>
+            <div id="errorDetails" class="text-sm text-red-300"></div>
         </div>
     </div>
 
@@ -187,14 +194,14 @@
 
             async init() {
                 try {
+                    // 绑定事件
+                    this.bindEvents();
+                    
                     // 初始化OCR
                     await this.initOCR();
                     
                     // 尝试启动摄像头
                     await this.startCamera();
-                    
-                    // 绑定事件
-                    this.bindEvents();
                     
                     // 隐藏加载界面
                     document.getElementById('loadingOverlay').style.display = 'none';
@@ -270,9 +277,22 @@
                 
                 // 显示具体错误信息
                 const errorDetails = document.getElementById('errorDetails');
+                let errorMessage = '未知错误';
+                
                 if (error) {
-                    errorDetails.textContent = `错误详情: ${error.message}`;
+                    if (typeof error === 'string') {
+                        errorMessage = error;
+                    } else if (error.message) {
+                        errorMessage = error.message;
+                    } else if (error.name) {
+                        errorMessage = error.name;
+                    } else {
+                        errorMessage = JSON.stringify(error);
+                    }
                 }
+                
+                errorDetails.textContent = `错误详情: ${errorMessage}`;
+                console.log('摄像头错误详情:', error);
             }
 
             bindEvents() {
@@ -290,6 +310,10 @@
 
                 document.getElementById('demoBtn').addEventListener('click', () => {
                     this.startDemo();
+                });
+
+                document.getElementById('testBasicCamera').addEventListener('click', async () => {
+                    await this.testBasicCamera();
                 });
 
                 document.getElementById('retryCamera').addEventListener('click', async () => {
@@ -561,6 +585,74 @@
                 setTimeout(() => {
                     this.simulateDetection(12, 350, 100);
                 }, 3000);
+            }
+
+            async testBasicCamera() {
+                const debugInfo = document.getElementById('debugInfo');
+                const errorDetails = document.getElementById('errorDetails');
+                
+                debugInfo.textContent = '正在进行基础测试...';
+                errorDetails.textContent = '';
+                
+                try {
+                    // 检查浏览器支持
+                    if (!navigator.mediaDevices) {
+                        throw new Error('浏览器不支持 mediaDevices API');
+                    }
+                    
+                    if (!navigator.mediaDevices.getUserMedia) {
+                        throw new Error('浏览器不支持 getUserMedia');
+                    }
+                    
+                    debugInfo.textContent = '✓ 浏览器支持检查通过，正在检查设备...';
+                    
+                    // 检查可用设备
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                    
+                    debugInfo.textContent = `✓ 找到 ${videoDevices.length} 个视频设备，正在测试摄像头...`;
+                    
+                    // 简单的摄像头测试
+                    try {
+                        const testStream = await navigator.mediaDevices.getUserMedia({
+                            video: { width: 640, height: 480 }
+                        });
+                        
+                        debugInfo.textContent = '✓ 摄像头访问成功！正在停止测试流...';
+                        
+                        // 停止测试流
+                        testStream.getTracks().forEach(track => track.stop());
+                        
+                        // 现在尝试正式启动
+                        setTimeout(async () => {
+                            try {
+                                document.getElementById('cameraPermission').style.display = 'none';
+                                document.getElementById('loadingOverlay').style.display = 'flex';
+                                await this.startCamera();
+                                document.getElementById('loadingOverlay').style.display = 'none';
+                            } catch (error) {
+                                this.showCameraUnavailable(error);
+                            }
+                        }, 1000);
+                        
+                    } catch (streamError) {
+                        debugInfo.textContent = '✗ 摄像头访问失败';
+                        errorDetails.textContent = `错误: ${streamError.message}`;
+                        
+                        // 提供具体的解决建议
+                        if (streamError.name === 'NotAllowedError') {
+                            errorDetails.textContent += '\n建议：点击浏览器地址栏的摄像头图标，选择"允许"';
+                        } else if (streamError.name === 'NotFoundError') {
+                            errorDetails.textContent += '\n建议：检查摄像头是否连接正常';
+                        } else if (streamError.name === 'NotReadableError') {
+                            errorDetails.textContent += '\n建议：摄像头可能被其他应用占用，请关闭其他应用后重试';
+                        }
+                    }
+                    
+                } catch (error) {
+                    debugInfo.textContent = '✗ 基础检查失败';
+                    errorDetails.textContent = `错误: ${error.message}`;
+                }
             }
 
             simulateDetection(score, x, y) {
