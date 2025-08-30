@@ -46,17 +46,15 @@ export function composeStrings(chains, preds, metas, { frameW, frameH } = {}) {
   const byId = new Map();
   preds.forEach(p => byId.set(p.id, { char: p.char, conf: p.prob }));
 
-  const maxChainLen = 3; // 限制最多三位（含一位小数点）
-  const maxBoxAreaRatio = 0.05; // 组合框面积占比超过 5% 视为异常
+  const maxChainLen = 3;
+  const maxBoxAreaRatio = 0.05;
   const minCharConf = 0.6;
 
   for (const chain of chains) {
-    // 组合框面积过滤（过大通常是整片红涂）
     const bbox = unionBoxes(chain);
     const areaRatio = (bbox.w * bbox.h) / (frameW * frameH);
     if (areaRatio > maxBoxAreaRatio) continue;
 
-    // 从 metas/preds 取字符
     let parts = [];
     let dots = [];
     for (const box of chain) {
@@ -74,21 +72,16 @@ export function composeStrings(chains, preds, metas, { frameW, frameH } = {}) {
       }
     }
 
-    // 限制长度
     if (parts.length > maxChainLen) {
-      // 保留最高置信的前三位
       parts.sort((a,b)=>b.conf - a.conf);
       parts = parts.slice(0, maxChainLen).sort((a,b)=>a.box.x - b.box.x);
     }
 
-    // 点的规则：最多 1 个，且必须明显更小并位于数字下半部
     if (dots.length > 1) continue;
     if (dots.length === 1 && !validDot(dots[0], parts)) {
-      // 点不合理则忽略点
       dots = [];
     }
 
-    // 组合文本
     let composed = '';
     if (parts.length) {
       composed = parts.map(p=>p.ch).join('');
@@ -100,7 +93,6 @@ export function composeStrings(chains, preds, metas, { frameW, frameH } = {}) {
       continue;
     }
 
-    // 数值范围过滤
     const val = parseValue(composed);
     if (val == null || val < 0 || val > 100) continue;
 
@@ -121,23 +113,19 @@ function parseValue(s) {
 
 function isSmallDot(dotBox, chain) {
   const ah = avgHeight(chain);
-  return dotBox.h < 0.5 * ah; // 明显更小
+  return dotBox.h < 0.5 * ah;
 }
 function validDot(dot, parts) {
   if (!parts.length) return false;
   const ah = avgHeight(parts.map(p=>p.box));
-  // 位于数字的下半部
   const midY = parts.reduce((s,p)=>s+(p.box.y+p.box.h/2),0)/parts.length;
   const dotCenterY = dot.box.y + dot.box.h/2;
   return dot.box.h < 0.5*ah && dotCenterY > midY;
 }
-
 function findDecimalInsertPos(parts) {
-  // 默认插入到倒数第一位前，或基于几何接近选择
   if (parts.length <= 1) return 1;
   return parts.length - 1;
 }
-
 function avgHeight(chain){ return chain.reduce((s,b)=>s+b.h,0)/chain.length; }
 function unionBoxes(boxes) {
   let minx=Infinity, miny=Infinity, maxx=-Infinity, maxy=-Infinity;
