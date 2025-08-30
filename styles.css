@@ -7,51 +7,35 @@
 html, body, #app { margin:0; padding:0; width:100%; height:100%; background:var(--bg); color:var(--fg); }
 #app { position:relative; overflow:hidden; }
 
-/* 视口容器，用于整体旋转 HUD 与视频 */
-#viewport {
-  position:absolute; inset:0;
-  transform-origin: center center;
-  display:block;
-}
-#viewport.landscape { transform: rotate(0deg); }
-#viewport.portrait { transform: rotate(90deg); }
-
-/* 旋转后，需要让内部内容在旋转坐标系下也铺满屏幕 */
-#viewport > video#video,
-#viewport > canvas#overlay {
-  position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;
+#video, #overlay {
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
 }
 #overlay { pointer-events:none; }
 
-/* HUD 始终跟着 viewport 一起旋转，内部布局固定在旋转后的坐标系 */
 #hud {
   position:absolute; inset:0; pointer-events:none;
 }
 
-/* 分数在旋转坐标系右上角（即视觉右上角） */
+/* 分数：视觉右上角（不旋转DOM，直接固定在右上） */
 #scorePanel {
   position:absolute; top:8px; right:8px;
-  background:var(--panel); padding:6px 10px; border-radius:12px;
+  background:var(--panel); padding:8px 12px; border-radius:12px;
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-  pointer-events:none;
 }
-#totalScore {
-  font-weight:800; font-size:28px; line-height:1;
-}
+#totalScore { font-weight:800; font-size:28px; line-height:1; }
 
-/* 状态条放在旋转坐标系左上角 */
+/* 状态条：视觉左上角 */
 #statusBar {
   position:absolute; top:8px; left:8px;
   display:flex; gap:8px; align-items:center;
-  background:var(--panel); padding:6px 10px; border-radius:12px;
+  background:var(--panel); padding:8px 12px; border-radius:12px;
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-  pointer-events:none;
 }
 #fpsText { color:#8bc34a; }
 
-/* 控件放在旋转坐标系底部中间 */
+/* 控件：根据“应用模式”的长/短边定义位置和宽度 */
 #controls {
-  position:absolute; left:50%; bottom:12px; transform:translateX(-50%);
+  position:absolute; left:50%; transform:translateX(-50%);
   display:flex; gap:8px; justify-content:center; pointer-events:auto;
 }
 #controls button {
@@ -59,6 +43,13 @@ html, body, #app { margin:0; padding:0; width:100%; height:100%; background:var(
 }
 #controls button:active { transform:translateY(1px); }
 
+/* 默认布局为竖屏应用模式（短边为宽度，下边放按钮） */
+#hud.mode-portrait #controls { bottom:12px; width:min(90vw, 420px); }
+
+/* 横屏应用模式（长边为宽度，下边放按钮，按钮更宽） */
+#hud.mode-landscape #controls { bottom:12px; width:min(95vw, 800px); }
+
+/* toast */
 .toast {
   position:fixed; left:50%; bottom:12px; transform:translateX(-50%);
   background:rgba(0,0,0,0.85); color:#fff; padding:10px 14px; border-radius:10px;
