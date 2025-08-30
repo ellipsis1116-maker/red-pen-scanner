@@ -2,40 +2,47 @@
   --bg: #0b0b0b;
   --fg: #f2f2f2;
   --panel: rgba(0,0,0,0.35);
+  /* JS 写入的安全视口变量 */
+  --vw: 100vw;
+  --vh: 100vh;
 }
 * { box-sizing: border-box; }
 html, body, #app { margin:0; padding:0; width:100%; height:100%; background:var(--bg); color:var(--fg); }
 #app { position:relative; overflow:hidden; }
 
-/* 相机：不旋转，始终铺满 */
+/* 层级：视频在底，旋转层在上 */
 #video {
-  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  object-fit:cover;
+  z-index: 0;
 }
 
-/* 旋转容器：让HUD与Overlay在视觉上跟随旋转，且始终铺满屏幕 */
+/* 旋转容器：使用 --vw/--vh，而不是 100vw/100vh */
 #rotate-wrap {
   position:absolute; inset:0;
-  display:block;
-  /* 使用一个中心定位容器，内部rotate-inner再旋转 */
+  z-index: 1; /* 在视频之上 */
 }
 #rotate-inner {
   position:absolute; left:50%; top:50%;
   transform-origin: center center;
 }
 
-/* 竖屏应用模式：不旋转，inner宽高等于视口 */
+/* 竖屏应用模式 */
 #rotate-wrap.mode-portrait #rotate-inner {
-  width: 100vw; height: 100vh;
+  width: var(--vw);
+  height: var(--vh);
   transform: translate(-50%, -50%) rotate(0deg);
 }
 
-/* 横屏应用模式：旋转90°，inner的宽高需要对调以铺满 */
+/* 横屏应用模式：对调宽高，旋转 90 度 */
 #rotate-wrap.mode-landscape #rotate-inner {
-  width: 100vh; height: 100vw; /* 对调以适配旋转后铺满 */
+  width: var(--vh);
+  height: var(--vw);
   transform: translate(-50%, -50%) rotate(90deg);
 }
 
-/* overlay与HUD在旋转后的坐标系内铺满 */
+/* 旋转坐标系内部的铺满 */
 #overlay {
   position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none;
 }
@@ -43,7 +50,7 @@ html, body, #app { margin:0; padding:0; width:100%; height:100%; background:var(
   position:absolute; inset:0; pointer-events:none;
 }
 
-/* 分数：视觉右上角（在旋转坐标系内固定右上） */
+/* 分数右上角（旋转坐标系内） */
 #scorePanel {
   position:absolute; top:8px; right:8px;
   background:var(--panel); padding:8px 12px; border-radius:12px;
@@ -51,7 +58,7 @@ html, body, #app { margin:0; padding:0; width:100%; height:100%; background:var(
 }
 #totalScore { font-weight:800; font-size:30px; line-height:1; }
 
-/* 状态：视觉左上角 */
+/* 状态左上角 */
 #statusBar {
   position:absolute; top:8px; left:8px;
   display:flex; gap:8px; align-items:center;
@@ -60,14 +67,15 @@ html, body, #app { margin:0; padding:0; width:100%; height:100%; background:var(
 }
 #fpsText { color:#8bc34a; }
 
-/* 控件：视觉底部中间，横/竖模式下宽度不同（旋转坐标系内部） */
+/* 控件底部中间（旋转坐标系内） */
 #controls {
   position:absolute; left:50%; bottom:12px; transform:translateX(-50%);
   display:flex; gap:8px; justify-content:center; pointer-events:auto;
 }
-#rotate-wrap.mode-portrait #controls { width:min(90vw, 420px); }
-#rotate-wrap.mode-landscape #controls { width:min(95vw, 800px); }
+#rotate-wrap.mode-portrait #controls { width:min(calc(var(--vw) * 0.9), 420px); }
+#rotate-wrap.mode-landscape #controls { width:min(calc(var(--vw) * 0.95), 800px); }
 
+/* 按钮 */
 #controls button {
   background:#1f1f1f; color:#fff; border:1px solid #333; border-radius:8px; padding:8px 12px; font-size:14px;
 }
@@ -78,6 +86,7 @@ html, body, #app { margin:0; padding:0; width:100%; height:100%; background:var(
   position:fixed; left:50%; bottom:12px; transform:translateX(-50%);
   background:rgba(0,0,0,0.85); color:#fff; padding:10px 14px; border-radius:10px;
   opacity:0; transition:opacity .2s ease; pointer-events:none; font-size:14px; border:1px solid #333;
+  z-index: 2;
 }
 .toast.show { opacity:1; }
 
