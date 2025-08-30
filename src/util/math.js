@@ -10,7 +10,6 @@ export function iou(a, b) {
   return ua <= 0 ? 0 : inter / ua;
 }
 
-// 将 worker 坐标映射到 overlay canvas（两者等比例铺满）
 export function parseDetectionsToCanvasSpace(bbox, frameSize, canvasSize) {
   const scaleX = canvasSize.w / frameSize.w;
   const scaleY = canvasSize.h / frameSize.h;
