@@ -53,7 +53,7 @@ export function findComponents(mask, w, h) {
     const h1 = c.maxy - c.miny + 1;
     const area = w1 * h1;
     if (w1 < 3 || h1 < 3) return;
-    if (area < 20) return;
+    if (area < 25) return;
     if (w1/h1 > 8 || h1/w1 > 8) return;
     comps.push({ x: c.minx, y: c.miny, w: w1, h: h1, area });
   });
