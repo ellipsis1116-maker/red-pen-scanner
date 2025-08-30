@@ -9,7 +9,7 @@ self.onmessage = async (e) => {
   const msg = e.data;
   try {
     if (msg.type === 'init') {
-      await loadTFJSModel(msg.modelPath); // 若失败，将使用占位推理
+      await loadTFJSModel(msg.modelPath);
       self.postMessage({ type: 'ready' });
       return;
     }
