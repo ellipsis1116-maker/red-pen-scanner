@@ -14,8 +14,7 @@ export async function loadTFJSModel(modelPath) {
     dummy.dispose();
     modelAvailable = true;
   } catch (err) {
-    modelAvailable = false;
-    // 占位模式
+    modelAvailable = false; // 使用占位推理
   }
 }
 
@@ -24,7 +23,7 @@ export async function inferTFJS(input) {
   if (!N) return [];
 
   if (!modelAvailable) {
-    // 占位推理：让全链路运转
+    // 占位推理（受限）：更保守，降低误检
     const preds = [];
     for (let i=0; i<N; i++){
       const arr = input.data[i];
@@ -32,7 +31,7 @@ export async function inferTFJS(input) {
       for (let k=0;k<arr.length;k++) sum += arr[k];
       const avg = sum / arr.length;
       let char = avg < 0.03 ? 'dot' : String(((Math.random()*10)|0));
-      let prob = Math.min(0.95, 0.4 + Math.random()*0.5);
+      let prob = Math.min(0.9, 0.35 + Math.random()*0.4);
       preds.push({ id: i, char, prob });
     }
     return preds;
