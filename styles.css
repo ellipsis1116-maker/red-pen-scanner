@@ -7,24 +7,51 @@
 html, body, #app { margin:0; padding:0; width:100%; height:100%; background:var(--bg); color:var(--fg); }
 #app { position:relative; overflow:hidden; }
 
-#video, #overlay {
+/* 相机：不旋转，始终铺满 */
+#video {
   position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
 }
-#overlay { pointer-events:none; }
 
+/* 旋转容器：让HUD与Overlay在视觉上跟随旋转，且始终铺满屏幕 */
+#rotate-wrap {
+  position:absolute; inset:0;
+  display:block;
+  /* 使用一个中心定位容器，内部rotate-inner再旋转 */
+}
+#rotate-inner {
+  position:absolute; left:50%; top:50%;
+  transform-origin: center center;
+}
+
+/* 竖屏应用模式：不旋转，inner宽高等于视口 */
+#rotate-wrap.mode-portrait #rotate-inner {
+  width: 100vw; height: 100vh;
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+
+/* 横屏应用模式：旋转90°，inner的宽高需要对调以铺满 */
+#rotate-wrap.mode-landscape #rotate-inner {
+  width: 100vh; height: 100vw; /* 对调以适配旋转后铺满 */
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+/* overlay与HUD在旋转后的坐标系内铺满 */
+#overlay {
+  position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none;
+}
 #hud {
   position:absolute; inset:0; pointer-events:none;
 }
 
-/* 分数：视觉右上角（不旋转DOM，直接固定在右上） */
+/* 分数：视觉右上角（在旋转坐标系内固定右上） */
 #scorePanel {
   position:absolute; top:8px; right:8px;
   background:var(--panel); padding:8px 12px; border-radius:12px;
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
 }
-#totalScore { font-weight:800; font-size:28px; line-height:1; }
+#totalScore { font-weight:800; font-size:30px; line-height:1; }
 
-/* 状态条：视觉左上角 */
+/* 状态：视觉左上角 */
 #statusBar {
   position:absolute; top:8px; left:8px;
   display:flex; gap:8px; align-items:center;
@@ -33,21 +60,18 @@ html, body, #app { margin:0; padding:0; width:100%; height:100%; background:var(
 }
 #fpsText { color:#8bc34a; }
 
-/* 控件：根据“应用模式”的长/短边定义位置和宽度 */
+/* 控件：视觉底部中间，横/竖模式下宽度不同（旋转坐标系内部） */
 #controls {
-  position:absolute; left:50%; transform:translateX(-50%);
+  position:absolute; left:50%; bottom:12px; transform:translateX(-50%);
   display:flex; gap:8px; justify-content:center; pointer-events:auto;
 }
+#rotate-wrap.mode-portrait #controls { width:min(90vw, 420px); }
+#rotate-wrap.mode-landscape #controls { width:min(95vw, 800px); }
+
 #controls button {
   background:#1f1f1f; color:#fff; border:1px solid #333; border-radius:8px; padding:8px 12px; font-size:14px;
 }
 #controls button:active { transform:translateY(1px); }
-
-/* 默认布局为竖屏应用模式（短边为宽度，下边放按钮） */
-#hud.mode-portrait #controls { bottom:12px; width:min(90vw, 420px); }
-
-/* 横屏应用模式（长边为宽度，下边放按钮，按钮更宽） */
-#hud.mode-landscape #controls { bottom:12px; width:min(95vw, 800px); }
 
 /* toast */
 .toast {
@@ -60,5 +84,5 @@ html, body, #app { margin:0; padding:0; width:100%; height:100%; background:var(
 @media (max-width:480px) {
   #controls { gap:6px; }
   #controls button { padding:8px 10px; font-size:13px; }
-  #totalScore { font-size:26px; }
+  #totalScore { font-size:28px; }
 }
