@@ -1,4 +1,3 @@
-// ImageBitmap 版本
 export async function prepareROIs(bitmap, chains, { inputSize=32 } = {}) {
   const w = bitmap.width, h = bitmap.height;
   const canvas = new OffscreenCanvas(w, h);
@@ -7,7 +6,6 @@ export async function prepareROIs(bitmap, chains, { inputSize=32 } = {}) {
   return prepareFromCanvas(canvas, chains, inputSize);
 }
 
-// RGBA 降级版本
 export async function prepareROIsFromRGBA(buffer, w, h, chains, { inputSize=32 } = {}) {
   const canvas = new OffscreenCanvas(w, h);
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
