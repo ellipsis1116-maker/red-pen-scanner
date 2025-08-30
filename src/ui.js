@@ -1,26 +1,25 @@
 export const UI = (() => {
-  let video, overlay, ctx, statusEl, fpsEl, totalEl, toastEl, viewportEl;
+  let video, overlay, hudEl, ctx, statusEl, fpsEl, totalEl, toastEl;
 
-  function init() {
-    viewportEl = document.getElementById('viewport');
+  function init(defaultMode='portrait') {
     video = document.getElementById('video');
     overlay = document.getElementById('overlay');
+    hudEl = document.getElementById('hud');
     ctx = overlay.getContext('2d');
     statusEl = document.getElementById('statusText');
     fpsEl = document.getElementById('fpsText');
     totalEl = document.getElementById('totalScore');
     toastEl = document.getElementById('toast');
 
-    applyOrientation('landscape'); // 默认横
+    applyMode(defaultMode);
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
   }
 
-  function applyOrientation(mode) {
-    viewportEl.classList.remove('landscape', 'portrait');
-    viewportEl.classList.add(mode === 'portrait' ? 'portrait' : 'landscape');
-    // 旋转的是 viewport 容器，overlay 的 CSS 尺寸不变，但视觉会跟随旋转
-    // 保证 overlay 像素尺寸和 CSS 尺寸同步
+  function applyMode(mode) {
+    hudEl.classList.remove('mode-portrait', 'mode-landscape');
+    hudEl.classList.add(mode === 'landscape' ? 'mode-landscape' : 'mode-portrait');
+    // 仅影响HUD布局；视频与覆盖层一直铺满
     requestAnimationFrame(resizeCanvas);
   }
 
@@ -64,5 +63,5 @@ export const UI = (() => {
   function getVideoEl() { return video; }
   function getOverlayEl() { return overlay; }
 
-  return { init, applyOrientation, setStatus, setFPS, updateScore, toast, drawOverlays, getVideoEl, getOverlayEl };
+  return { init, applyMode, setStatus, setFPS, updateScore, toast, drawOverlays, getVideoEl, getOverlayEl };
 })();
