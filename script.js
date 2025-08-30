@@ -61,40 +61,43 @@ async function setupCamera() {
     }
 }
 
-// 4. 实时处理视频帧并应用滤镜
+// 4. 实时处理视频帧并应用滤镜 (柔和版本)
 function processFrames() {
-    // 将视频当前帧绘制到canvas上
+    // 确保canvas尺寸与窗口匹配，以实现全屏效果
+    if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     
-    // 获取canvas的像素数据
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
 
-    // 遍历每一个像素点 (每4个值为一个像素 R, G, B, A)
     for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
 
-        // 核心滤镜逻辑：判断是否为红色
-        // 条件：红色分量远大于绿色和蓝色分量，且红色分量达到一定阈值
-        if (r > 100 && r > g * 1.5 && r > b * 1.5) {
-            // 如果是红色，保留原色 (或者可以增强)
-            data[i] = 255;     // R
-            data[i + 1] = 0;   // G
-            data[i + 2] = 0;   // B
+        // 滤镜逻辑: 判断是否为红色
+        // 你可以微调这些数值来达到最佳效果
+        if (r > 90 && r > g * 1.3 && r > b * 1.3) {
+            // 如果是红色，让它更红更亮
+            data[i] = 255;
+            data[i + 1] = 0;
+            data[i + 2] = 0;
         } else {
-            // 如果不是红色，变为白色（高曝光效果）
-            data[i] = 255;     // R
-            data[i + 1] = 255; // G
-            data[i + 2] = 255; // B
+            // 如果不是红色，转换为高对比度的灰度图
+            const gray = (r * 0.299 + g * 0.587 + b * 0.114);
+            // 通过一个简单的阈值实现高对比度
+            const highContrastGray = gray > 80 ? 200 : 30;
+            data[i] = highContrastGray;     // R
+            data[i + 1] = highContrastGray; // G
+            data[i + 2] = highContrastGray; // B
         }
     }
     
-    // 将处理后的像素数据放回canvas
     ctx.putImageData(imageData, 0, 0);
-
-    // 持续循环处理
     requestAnimationFrame(processFrames);
 }
 
