@@ -1,5 +1,3 @@
-// 更严格的红色分割阈值与稍加强的形态学，减少误检
-
 export async function segmentRed(bitmap) {
   const w = bitmap.width, h = bitmap.height;
   const off = new OffscreenCanvas(w, h);
@@ -17,7 +15,6 @@ export function segmentRedFromRGBA(buffer, w, h) {
 function segmentRedCore(data, w, h) {
   const mask = new Uint8Array(w*h);
 
-  // 先简单的通道拉伸，弱白平衡
   let rmax=1,gmax=1,bmax=1;
   for (let i=0;i<data.length;i+=4){ rmax=Math.max(rmax, data[i]); gmax=Math.max(gmax, data[i+1]); bmax=Math.max(bmax, data[i+2]); }
   const rg = 255 / rmax, gg = 255 / gmax, bg = 255 / bmax;
@@ -39,12 +36,10 @@ function segmentRedCore(data, w, h) {
       }
       if (hdeg < 0) hdeg += 360;
     }
-    // 更窄的“红”范围 + 更高饱和/亮度阈值
     const inRedHue = (hdeg <= 15 || hdeg >= 345) || (hdeg >= 170 && hdeg <= 190);
     mask[p] = (inRedHue && s > 0.55 && v > 0.45) ? 255 : 0;
   }
 
-  // 形态学：开(去噪) + 闭(连通)，稍加强一次
   const t1 = new Uint8Array(w*h);
   const t2 = new Uint8Array(w*h);
   erode(mask, t1, w, h);
