@@ -8,10 +8,10 @@
 </head>
 <body>
   <div id="app">
-    <!-- 相机层：始终原样显示，不跟随旋转 -->
+    <!-- 相机层：不旋转 -->
     <video id="video" playsinline autoplay muted></video>
 
-    <!-- 旋转层：HUD与Overlay随模式旋转 -->
+    <!-- 旋转层：HUD与Overlay一起旋转 -->
     <div id="rotate-wrap" class="mode-portrait">
       <div id="rotate-inner">
         <canvas id="overlay"></canvas>
@@ -33,6 +33,20 @@
 
     <div id="toast" class="toast"></div>
   </div>
+
+  <script>
+    // 安全视口尺寸，解决移动端 100vh/100vw 问题
+    function updateSafeViewportVars() {
+      const vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+      const vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+      document.documentElement.style.setProperty('--vw', vw + 'px');
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    window.addEventListener('resize', updateSafeViewportVars);
+    window.addEventListener('orientationchange', () => setTimeout(updateSafeViewportVars, 200));
+    document.addEventListener('DOMContentLoaded', updateSafeViewportVars);
+  </script>
+
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>
