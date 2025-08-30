@@ -50,7 +50,7 @@ export const UI = (() => {
     ctx.clearRect(0,0,w,h);
     if (diag?.redRatio != null) {
       ctx.fillStyle = 'rgba(255,82,82,0.2)';
-      ctx.fillRect(0, 0, Math.min(w*diag.redRatio, w), 4);
+      ctx.fillRect(0, 0, Math.min(w*diag.redRatio*5, w), 4);
     }
     ctx.lineWidth = 2;
     ctx.font = '16px system-ui, sans-serif';
