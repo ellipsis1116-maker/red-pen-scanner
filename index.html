@@ -147,16 +147,24 @@
         <div>角度: <span id="angleStatus">良好</span></div>
     </div>
 
-    <!-- 摄像头不可用提示 -->
-    <div id="cameraUnavailable" class="fixed inset-0 bg-black bg-opacity-90 flex flex-col justify-center items-center text-white z-40" style="display: none;">
+    <!-- 摄像头权限提示 -->
+    <div id="cameraPermission" class="fixed inset-0 bg-black bg-opacity-90 flex flex-col justify-center items-center text-white z-40" style="display: none;">
         <div class="text-center max-w-md mx-4">
             <div class="text-6xl mb-4">📸</div>
-            <h2 class="text-2xl font-bold mb-4">摄像头功能演示</h2>
-            <p class="text-gray-300 mb-6">在当前环境中摄像头访问受限，这是一个功能完整的原型。</p>
-            <p class="text-sm text-gray-400 mb-6">部署到GitHub Pages或其他HTTPS网站后即可使用摄像头功能。</p>
-            <button id="demoBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-bold">
-                查看界面演示
-            </button>
+            <h2 class="text-2xl font-bold mb-4">需要摄像头权限</h2>
+            <p class="text-gray-300 mb-6">请点击浏览器地址栏的摄像头图标，然后选择"允许"来使用摄像头功能。</p>
+            <div class="text-sm text-gray-400 mb-6">
+                <p>确保您的设备已连接摄像头，并且没有被其他应用占用。</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="retryCamera" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold">
+                    重新尝试
+                </button>
+                <button id="demoBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-bold">
+                    演示模式
+                </button>
+            </div>
+            <div id="errorDetails" class="mt-4 text-sm text-red-300"></div>
         </div>
     </div>
 
@@ -193,7 +201,7 @@
                     
                 } catch (error) {
                     console.error('初始化失败:', error);
-                    this.showCameraUnavailable();
+                    this.showCameraUnavailable(error);
                 }
             }
 
@@ -213,31 +221,58 @@
             }
 
             async startCamera() {
+                // 检查是否支持摄像头
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('您的浏览器不支持摄像头访问');
+                }
+
                 try {
-                    const constraints = {
+                    // 首先尝试后置摄像头
+                    let constraints = {
                         video: {
-                            facingMode: 'environment', // 后置摄像头
+                            facingMode: 'environment',
                             width: { ideal: 1920 },
                             height: { ideal: 1080 }
                         }
                     };
 
-                    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    try {
+                        this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    } catch (envError) {
+                        console.log('后置摄像头不可用，尝试默认摄像头');
+                        // 如果后置摄像头失败，尝试任意摄像头
+                        constraints = {
+                            video: {
+                                width: { ideal: 1920 },
+                                height: { ideal: 1080 }
+                            }
+                        };
+                        this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    }
+
                     this.video.srcObject = this.stream;
                     
                     this.video.onloadedmetadata = () => {
                         this.canvas.width = this.video.videoWidth;
                         this.canvas.height = this.video.videoHeight;
+                        console.log('摄像头启动成功');
                     };
                     
                 } catch (error) {
-                    throw new Error('无法访问摄像头');
+                    console.error('摄像头访问失败:', error);
+                    throw error;
                 }
             }
 
-            showCameraUnavailable() {
+            showCameraUnavailable(error) {
                 document.getElementById('loadingOverlay').style.display = 'none';
-                document.getElementById('cameraUnavailable').style.display = 'flex';
+                document.getElementById('cameraPermission').style.display = 'flex';
+                
+                // 显示具体错误信息
+                const errorDetails = document.getElementById('errorDetails');
+                if (error) {
+                    errorDetails.textContent = `错误详情: ${error.message}`;
+                }
             }
 
             bindEvents() {
@@ -255,6 +290,19 @@
 
                 document.getElementById('demoBtn').addEventListener('click', () => {
                     this.startDemo();
+                });
+
+                document.getElementById('retryCamera').addEventListener('click', async () => {
+                    document.getElementById('cameraPermission').style.display = 'none';
+                    document.getElementById('loadingOverlay').style.display = 'flex';
+                    document.getElementById('loadingOverlay').querySelector('.text-xl').textContent = '正在重新尝试摄像头...';
+                    
+                    try {
+                        await this.startCamera();
+                        document.getElementById('loadingOverlay').style.display = 'none';
+                    } catch (error) {
+                        this.showCameraUnavailable(error);
+                    }
                 });
 
                 // 隐藏闪光灯提示
