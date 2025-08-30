@@ -48,7 +48,6 @@ export const UI = (() => {
   function drawOverlays(items, diag) {
     const w = overlay.width, h = overlay.height;
     ctx.clearRect(0,0,w,h);
-    // 可选：根据 diag 显示质量条
     if (diag?.redRatio != null) {
       ctx.fillStyle = 'rgba(255,82,82,0.2)';
       ctx.fillRect(0, 0, Math.min(w*diag.redRatio, w), 4);
