@@ -16,7 +16,8 @@ video#video, canvas#overlay {
 #overlay { pointer-events:none; }
 
 #hud {
-  position:absolute; top:0; left:0; width:100%; padding:8px; display:flex; flex-direction:column; gap:8px; pointer-events:none;
+  position:absolute; top:0; left:0; width:100%; padding:8px;
+  display:flex; flex-direction:column; gap:8px; pointer-events:none;
 }
 #controls {
   display:flex; gap:8px; justify-content:center; pointer-events:auto;
@@ -27,14 +28,15 @@ video#video, canvas#overlay {
 #controls button:active { transform:translateY(1px); }
 
 #scorePanel {
-  align-self:flex-end; background:var(--panel); padding:8px 12px; border-radius:12px; backdrop-filter: blur(6px);
+  align-self:flex-end; background:var(--panel); padding:8px 12px; border-radius:12px;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
 }
 #scorePanel .total { font-weight:bold; font-size:16px; }
 #scorePanel details { margin-top:4px; }
 #scorePanel ul { margin:8px 0 0 0; padding:0; list-style:none; max-height:30vh; overflow:auto; }
 #scorePanel li { font-size:13px; color:#ddd; }
 
-#statusBar { display:flex; justify-content:space-between; width:100%; background:var(--panel); padding:6px 10px; border-radius:12px; backdrop-filter: blur(6px); }
+#statusBar { display:flex; justify-content:space-between; width:100%; background:var(--panel); padding:6px 10px; border-radius:12px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 #statusText { color:#ddd; }
 #fpsText { color:#8bc34a; }
 
