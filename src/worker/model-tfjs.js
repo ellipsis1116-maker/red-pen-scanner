@@ -14,7 +14,7 @@ export async function loadTFJSModel(modelPath) {
     dummy.dispose();
     modelAvailable = true;
   } catch (err) {
-    modelAvailable = false; // 使用占位推理
+    modelAvailable = false;
   }
 }
 
@@ -23,7 +23,6 @@ export async function inferTFJS(input) {
   if (!N) return [];
 
   if (!modelAvailable) {
-    // 占位推理（受限）：更保守，降低误检
     const preds = [];
     for (let i=0; i<N; i++){
       const arr = input.data[i];
