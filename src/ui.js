@@ -1,9 +1,11 @@
 export const UI = (() => {
-  let video, overlay, hudEl, ctx, statusEl, fpsEl, totalEl, toastEl;
+  let video, overlay, rotateWrap, rotateInner, hudEl, ctx, statusEl, fpsEl, totalEl, toastEl;
 
   function init(defaultMode='portrait') {
     video = document.getElementById('video');
     overlay = document.getElementById('overlay');
+    rotateWrap = document.getElementById('rotate-wrap');
+    rotateInner = document.getElementById('rotate-inner');
     hudEl = document.getElementById('hud');
     ctx = overlay.getContext('2d');
     statusEl = document.getElementById('statusText');
@@ -17,15 +19,16 @@ export const UI = (() => {
   }
 
   function applyMode(mode) {
-    hudEl.classList.remove('mode-portrait', 'mode-landscape');
-    hudEl.classList.add(mode === 'landscape' ? 'mode-landscape' : 'mode-portrait');
-    // 仅影响HUD布局；视频与覆盖层一直铺满
+    rotateWrap.classList.remove('mode-portrait', 'mode-landscape');
+    rotateWrap.classList.add(mode === 'landscape' ? 'mode-landscape' : 'mode-portrait');
     requestAnimationFrame(resizeCanvas);
   }
 
   function resizeCanvas() {
-    overlay.width = overlay.clientWidth;
-    overlay.height = overlay.clientHeight;
+    // 根据旋转后的容器尺寸设置 canvas 像素大小
+    const rect = rotateInner.getBoundingClientRect();
+    overlay.width = Math.max(1, Math.round(rect.width));
+    overlay.height = Math.max(1, Math.round(rect.height));
   }
 
   function setStatus(text) { statusEl.textContent = text; }
