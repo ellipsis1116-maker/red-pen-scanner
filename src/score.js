@@ -4,8 +4,8 @@ export class Score {
   constructor() {
     this.items = []; // {text, bbox, conf, t}
     this.timeWindow = 5000; // ms
-    this.itemRange = [0, 100]; // 单项有效范围
-    this.totalCap = [0, 150]; // 总分硬上限，可按试卷调整
+    this.itemRange = [0, 100];
+    this.totalCap = [0, 150];
   }
   reset() { this.items = []; }
 
@@ -38,17 +38,12 @@ export class Score {
     return Math.round(sum * 10) / 10;
   }
 
-  getBreakdown() {
-    return this.items.map(it => ({ text: it.text, bbox: it.bbox, conf: it.conf }));
-  }
-
   _parseNumber(s) {
     const m = String(s).trim().match(/^(\d{1,3})(?:\.(\d))?$/);
     if (!m) return NaN;
     const intp = parseInt(m[1],10);
     const frac = m[2] ? parseInt(m[2],10) : 0;
-    if (m[2] && !(frac === 5 || frac === 0)) return NaN; // 仅允许 .5
-    const val = intp + (frac === 5 ? 0.5 : 0);
-    return val;
+    if (m[2] && !(frac === 5 || frac === 0)) return NaN;
+    return intp + (frac === 5 ? 0.5 : 0);
   }
 }
