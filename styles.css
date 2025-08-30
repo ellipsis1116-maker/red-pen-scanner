@@ -1,54 +1,66 @@
 :root {
   --bg: #0b0b0b;
   --fg: #f2f2f2;
-  --accent: #ff5252;
-  --muted: #9aa0a6;
   --panel: rgba(0,0,0,0.35);
 }
 * { box-sizing: border-box; }
 html, body, #app { margin:0; padding:0; width:100%; height:100%; background:var(--bg); color:var(--fg); }
 #app { position:relative; overflow:hidden; }
 
-video#video, canvas#overlay {
+/* 视口容器，用于整体旋转 HUD 与视频 */
+#viewport {
+  position:absolute; inset:0;
+  transform-origin: center center;
+  display:block;
+}
+#viewport.landscape { transform: rotate(0deg); }
+#viewport.portrait { transform: rotate(90deg); }
+
+/* 旋转后，需要让内部内容在旋转坐标系下也铺满屏幕 */
+#viewport > video#video,
+#viewport > canvas#overlay {
   position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;
 }
 #overlay { pointer-events:none; }
 
+/* HUD 始终跟着 viewport 一起旋转，内部布局固定在旋转后的坐标系 */
 #hud {
-  position:absolute; top:0; left:0; width:100%; padding:8px;
-  display:flex; flex-direction:column; gap:8px; pointer-events:none;
+  position:absolute; inset:0; pointer-events:none;
 }
+
+/* 分数在旋转坐标系右上角（即视觉右上角） */
+#scorePanel {
+  position:absolute; top:8px; right:8px;
+  background:var(--panel); padding:6px 10px; border-radius:12px;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  pointer-events:none;
+}
+#totalScore {
+  font-weight:800; font-size:28px; line-height:1;
+}
+
+/* 状态条放在旋转坐标系左上角 */
+#statusBar {
+  position:absolute; top:8px; left:8px;
+  display:flex; gap:8px; align-items:center;
+  background:var(--panel); padding:6px 10px; border-radius:12px;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  pointer-events:none;
+}
+#fpsText { color:#8bc34a; }
+
+/* 控件放在旋转坐标系底部中间 */
 #controls {
-  display:flex; gap:8px; justify-content:center; pointer-events:auto; flex-wrap:wrap;
+  position:absolute; left:50%; bottom:12px; transform:translateX(-50%);
+  display:flex; gap:8px; justify-content:center; pointer-events:auto;
 }
 #controls button {
   background:#1f1f1f; color:#fff; border:1px solid #333; border-radius:8px; padding:8px 12px; font-size:14px;
 }
 #controls button:active { transform:translateY(1px); }
 
-#scorePanel {
-  align-self:flex-end; background:var(--panel); padding:8px 12px; border-radius:12px;
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-}
-#scorePanel .total { font-weight:bold; font-size:16px; }
-#scorePanel details { margin-top:4px; }
-#scorePanel ul { margin:8px 0 0 0; padding:0; list-style:none; max-height:30vh; overflow:auto; }
-#scorePanel li { font-size:13px; color:#ddd; }
-
-#statusBar { display:flex; justify-content:space-between; width:100%; background:var(--panel); padding:6px 10px; border-radius:12px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-#statusText { color:#ddd; }
-#fpsText { color:#8bc34a; }
-
-.hint {
-  position:absolute; bottom:16px; left:50%; transform:translateX(-50%);
-  background:rgba(0,0,0,0.6); color:#ff5252; font-weight:700;
-  padding:8px 12px; border-radius:8px; opacity:0; transition:opacity .3s ease;
-  pointer-events:none; max-width:90%; text-align:center;
-}
-.hint.show { opacity:1; }
-
 .toast {
-  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  position:fixed; left:50%; bottom:12px; transform:translateX(-50%);
   background:rgba(0,0,0,0.85); color:#fff; padding:10px 14px; border-radius:10px;
   opacity:0; transition:opacity .2s ease; pointer-events:none; font-size:14px; border:1px solid #333;
 }
@@ -57,4 +69,5 @@ video#video, canvas#overlay {
 @media (max-width:480px) {
   #controls { gap:6px; }
   #controls button { padding:8px 10px; font-size:13px; }
+  #totalScore { font-size:26px; }
 }
