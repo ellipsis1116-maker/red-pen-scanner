@@ -1,12 +1,13 @@
 import { UI } from './ui.js';
-import { initCamera, switchCamera, tryTorch } from './camera.js';
+import { initCamera } from './camera.js';
 import { createPipeline } from './pipeline.js';
 import { Score } from './score.js';
 
 let pipeline = null;
 let scoring = null;
-let torchOn = false;
-let rotateMode = 0; // 0,1,2,3 => 0/90/180/270 deg
+
+// 横竖模式：'landscape' | 'portrait'，按钮文字：横/竖
+let orient = 'landscape';
 
 async function boot() {
   UI.init();
@@ -23,12 +24,11 @@ async function boot() {
     backend: 'tfjs',
     modelPath: './model/tfjs/model.json',
     targetFps: 8,
-    getRotateMode: () => rotateMode, // 新增：由 UI 控制旋转角度
+    getOrient: () => orient, // 由 UI 控制横竖
     onDetections: (items, diag) => {
       scoring.addDetections(items);
       const total = scoring.getTotal();
       UI.updateScore(total);
-      UI.updateBreakdown(scoring.getBreakdown());
       UI.drawOverlays(items, diag);
       if (diag?.suggestions?.length) UI.setStatus(diag.suggestions.join(' | '));
     },
@@ -36,12 +36,9 @@ async function boot() {
   });
 
   UI.setStatus('就绪');
-  UI.showFlashHint(5000);
 
   const startBtn = document.getElementById('startBtn');
-  const switchBtn = document.getElementById('switchBtn');
-  const rotateBtn = document.getElementById('rotateBtn');
-  const torchBtn = document.getElementById('torchBtn');
+  const orientBtn = document.getElementById('orientBtn');
   const resetBtn = document.getElementById('resetBtn');
 
   startBtn.onclick = async () => {
@@ -50,29 +47,16 @@ async function boot() {
       UI.toast('开始识别');
     }
   };
-  switchBtn.onclick = async () => {
-    const newStream = await switchCamera();
-    await pipeline.replaceStream(newStream);
-    UI.toast('已切换相机');
+
+  orientBtn.onclick = () => {
+    orient = orient === 'landscape' ? 'portrait' : 'landscape';
+    orientBtn.textContent = orient === 'landscape' ? '横' : '竖';
+    UI.applyOrientation(orient);
   };
-  rotateBtn.onclick = () => {
-    rotateMode = (rotateMode + 1) % 4;
-    UI.toast(`旋转至 ${rotateMode*90}°`);
-  };
-  torchBtn.onclick = async () => {
-    torchOn = !torchOn;
-    const ok = await tryTorch(torchOn);
-    if (!ok) {
-      UI.toast('设备或浏览器不支持手电筒');
-      torchOn = false;
-    } else {
-      UI.toast(torchOn ? '手电筒已开' : '手电筒已关');
-    }
-  };
+
   resetBtn.onclick = () => {
     scoring.reset();
     UI.updateScore(0);
-    UI.updateBreakdown([]);
     UI.toast('已重置');
   };
 }
