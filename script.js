@@ -11,25 +11,27 @@ let ocrWorker = null;
 let isOcrReady = false;
 
 // 异步函数：初始化OCR Worker
+// 异步函数：初始化OCR Worker (带更多调试信息)
 async function initializeOcr() {
+    console.log("开始初始化OCR Worker...");
+    loadingMessage.innerText = "正在加载OCR模型...";
     try {
-        // 创建一个Tesseract worker实例
         ocrWorker = await Tesseract.createWorker('eng', 1, {
-            logger: m => console.log(m), // 在控制台输出进度
+            // logger: m => console.log(m), // 这会输出过多信息，可以先注释掉
         });
         
-        // 设置只识别数字、小数点和加号（有时手写分数会带'+'）
+        console.log("OCR Worker创建成功，正在设置参数...");
         await ocrWorker.setParameters({
             tessedit_char_whitelist: '0123456789.+',
         });
 
         console.log("OCR Worker 初始化完成。");
         isOcrReady = true;
-        loadingMessage.style.display = 'none'; // 隐藏加载信息
-        scoreDisplay.style.display = 'block'; // 显示分数区域
+        loadingMessage.style.display = 'none';
+        scoreDisplay.style.display = 'block';
     } catch (error) {
-        console.error("OCR 初始化失败:", error);
-        loadingMessage.innerText = "OCR 加载失败，请刷新页面。";
+        console.error("OCR 初始化失败，请检查网络连接和控制台错误:", error);
+        loadingMessage.innerText = "OCR 加载失败，请检查控制台。";
     }
 }
 
