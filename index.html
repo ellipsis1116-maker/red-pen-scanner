@@ -8,19 +8,26 @@
 </head>
 <body>
   <div id="app">
+    <!-- 相机层：始终原样显示，不跟随旋转 -->
     <video id="video" playsinline autoplay muted></video>
-    <canvas id="overlay"></canvas>
 
-    <div id="hud">
-      <div id="scorePanel"><span id="totalScore">0</span></div>
-      <div id="statusBar">
-        <span id="statusText">初始化中...</span>
-        <span id="fpsText">FPS: --</span>
-      </div>
-      <div id="controls">
-        <button id="startBtn">开始识别</button>
-        <button id="orientBtn">横</button>
-        <button id="resetBtn">重置</button>
+    <!-- 旋转层：HUD与Overlay随模式旋转 -->
+    <div id="rotate-wrap" class="mode-portrait">
+      <div id="rotate-inner">
+        <canvas id="overlay"></canvas>
+
+        <div id="hud">
+          <div id="scorePanel"><span id="totalScore">0</span></div>
+          <div id="statusBar">
+            <span id="statusText">初始化中...</span>
+            <span id="fpsText">FPS: --</span>
+          </div>
+          <div id="controls">
+            <button id="startBtn">开始识别</button>
+            <button id="orientBtn">横</button>
+            <button id="resetBtn">重置</button>
+          </div>
+        </div>
       </div>
     </div>
 
