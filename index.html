@@ -1,35 +1,22 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>教师红笔分数识别 Demo</title>
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>教师批改扫描器</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>红笔分数识别（Demo）</h1>
-  <div id="app">
-    <video id="video" playsinline autoplay></video>
-    <canvas id="canvas" style="display:none;"></canvas>
-    <canvas id="overlay"></canvas>
-    <div id="controls">
-      <button id="startBtn">启动摄像头</button>
-      <button id="stopBtn" disabled>停止</button>
-      <label>
-        间隔(ms):
-        <input id="intervalInput" type="number" value="1000" min="200" />
-      </label>
-      <button id="scanBtn">手动扫描一次</button>
-    </div>
-    <div id="result">
-      <div>识别到的分数列表：<span id="scoresList">[]</span></div>
-      <div>总分：<span id="totalScore">0</span></div>
-      <div id="log"></div>
-    </div>
-  </div>
+    <canvas id="canvas"></canvas>
+    
+    <video id="video" playsinline autoplay muted></video>
 
-  <!-- Tesseract.js CDN -->
-  <script src="https://unpkg.com/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
-  <script src="app.js"></script>
+    <div id="status-display">
+        <p id="loading-message">正在加载OCR模型...</p>
+        <p id="score-display">总分: 0</p>
+    </div>
+
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <script src="script.js"></script>
 </body>
 </html>
