@@ -1,4 +1,5 @@
-// 基于 ImageBitmap 读取像素并做 HSV 分割
+// 更严格的红色分割阈值与稍加强的形态学，减少误检
+
 export async function segmentRed(bitmap) {
   const w = bitmap.width, h = bitmap.height;
   const off = new OffscreenCanvas(w, h);
@@ -8,7 +9,6 @@ export async function segmentRed(bitmap) {
   return segmentRedCore(img.data, w, h);
 }
 
-// 直接从 RGBA ArrayBuffer 分割（用于降级路径）
 export function segmentRedFromRGBA(buffer, w, h) {
   const data = new Uint8ClampedArray(buffer);
   return segmentRedCore(data, w, h);
@@ -16,8 +16,17 @@ export function segmentRedFromRGBA(buffer, w, h) {
 
 function segmentRedCore(data, w, h) {
   const mask = new Uint8Array(w*h);
+
+  // 先简单的通道拉伸，弱白平衡
+  let rmax=1,gmax=1,bmax=1;
+  for (let i=0;i<data.length;i+=4){ rmax=Math.max(rmax, data[i]); gmax=Math.max(gmax, data[i+1]); bmax=Math.max(bmax, data[i+2]); }
+  const rg = 255 / rmax, gg = 255 / gmax, bg = 255 / bmax;
+
   for (let i=0, p=0; i<data.length; i+=4, p++) {
-    const r = data[i]/255, g = data[i+1]/255, b = data[i+2]/255;
+    const r = Math.min(255, data[i]*rg)/255;
+    const g = Math.min(255, data[i+1]*gg)/255;
+    const b = Math.min(255, data[i+2]*bg)/255;
+
     const max = Math.max(r,g,b), min = Math.min(r,g,b);
     const v = max;
     const d = max - min;
@@ -30,15 +39,19 @@ function segmentRedCore(data, w, h) {
       }
       if (hdeg < 0) hdeg += 360;
     }
-    const inRed = (hdeg <= 10 || hdeg >= 350) || (hdeg >= 170 && hdeg <= 190);
-    mask[p] = (inRed && s > 0.45 && v > 0.35) ? 255 : 0;
+    // 更窄的“红”范围 + 更高饱和/亮度阈值
+    const inRedHue = (hdeg <= 15 || hdeg >= 345) || (hdeg >= 170 && hdeg <= 190);
+    mask[p] = (inRedHue && s > 0.55 && v > 0.45) ? 255 : 0;
   }
-  // 形态学开闭（3x3）
-  const out = new Uint8Array(w*h);
-  erode(mask, out, w, h);
-  dilate(out, mask, w, h);
-  dilate(mask, out, w, h);
-  erode(out, mask, w, h);
+
+  // 形态学：开(去噪) + 闭(连通)，稍加强一次
+  const t1 = new Uint8Array(w*h);
+  const t2 = new Uint8Array(w*h);
+  erode(mask, t1, w, h);
+  dilate(t1, t2, w, h);
+  dilate(t2, t1, w, h);
+  erode(t1, mask, w, h);
+
   return { mask, width: w, height: h };
 }
 
