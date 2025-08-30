@@ -2,7 +2,15 @@ import { UI } from './ui.js';
 import { parseDetectionsToCanvasSpace } from './util/math.js';
 import { Perf } from './util/perf.js';
 
-export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.json', targetFps=8, getOrient=()=> 'landscape', onDetections, onFps }) {
+/*
+策略：
+- DOM 不旋转。视频与 overlay 始终铺满屏幕（object-fit: cover）
+- 应用模式决定采样方向：
+  - portrait: 将视频采样并“校正到竖向内部基准”，Worker 以竖向帧识别
+  - landscape: 将视频采样并“校正到横向内部基准”，Worker 以横向帧识别
+- 映射回 UI：worker 返回的 frameSize 是内部基准尺寸；统一映射到 overlay 像素
+*/
+export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.json', targetFps=8, getAppMode=()=> 'portrait', onDetections, onFps }) {
   const worker = new Worker(new URL('./worker/worker.js', import.meta.url), { type: 'module' });
   let running = false;
   let offscreen;
@@ -28,28 +36,16 @@ export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.j
       }
     } else if (msg.type === 'error') {
       console.error('[worker] error', msg.message);
-      UI.setStatus('识别出错：' + msg.message);
     }
   };
 
   async function start() {
     if (running) return;
     const video = UI.getVideoEl();
-
     if (!video.videoWidth || !video.videoHeight) {
       await new Promise(res => video.addEventListener('loadedmetadata', res, { once: true }));
     }
 
-    const videoLandscape = video.videoWidth >= video.videoHeight;
-    const appOrient = getOrient() === 'portrait' ? 'portrait' : 'landscape';
-    const isLandscapeSample = (appOrient === 'landscape');
-
-    // 采样分辨率：横模式更高宽度
-    const targetW = isLandscapeSample ? 960 : 640;
-    const w = targetW;
-    const h = Math.max(1, Math.round((video.videoHeight / video.videoWidth) * w));
-    offscreen = new OffscreenCanvas(w, h);
-    const osctx = offscreen.getContext('2d', { willReadFrequently: true });
     running = true;
 
     const loop = async (ts) => {
@@ -58,28 +54,78 @@ export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.j
       if (ts - lastTick >= interval) {
         lastTick = ts;
 
-        const orient = getOrient() === 'portrait' ? 'portrait' : 'landscape';
-        const rotQuarter = orient === 'portrait' ? 1 : 0; // 0deg or 90deg
+        const mode = getAppMode() === 'landscape' ? 'landscape' : 'portrait';
+        const vw = video.videoWidth, vh = video.videoHeight;
 
-        osctx.save();
-        osctx.clearRect(0,0,offscreen.width, offscreen.height);
-        if (rotQuarter === 0) {
-          osctx.drawImage(video, 0, 0, offscreen.width, offscreen.height);
-        } else {
-          // 旋转采样坐标系 90°
-          osctx.translate(offscreen.width/2, offscreen.height/2);
-          osctx.rotate(Math.PI/2);
-          const dw = offscreen.width, dh = offscreen.height;
-          osctx.drawImage(video, -dw/2, -dh/2, dw, dh);
+        // 内部基准尺寸：竖向用 640xH，横向用 960xH'
+        const baseW = mode === 'landscape' ? 960 : 640;
+        const baseH = Math.round((vh / vw) * baseW);
+
+        // 为当前模式准备 offscreen
+        if (!offscreen || offscreen.width !== baseW || offscreen.height !== baseH) {
+          offscreen = new OffscreenCanvas(baseW, baseH);
         }
-        osctx.restore();
+        const ctx = offscreen.getContext('2d', { willReadFrequently: true });
+        ctx.save();
+        ctx.clearRect(0,0,baseW,baseH);
+
+        // 将视频画面以 cover 策略缩放剪裁后绘制到内部基准方向
+        // 1) 计算 cover 的源裁剪区域
+        const destW = baseW, destH = baseH;
+        const videoAspect = vw / vh;
+        const destAspect = destW / destH;
+        let sx, sy, sw, sh;
+        if (videoAspect > destAspect) {
+          // 视频更宽，裁左右
+          sh = vh;
+          sw = Math.round(vh * destAspect);
+          sx = Math.round((vw - sw) / 2);
+          sy = 0;
+        } else {
+          // 视频更高，裁上下
+          sw = vw;
+          sh = Math.round(vw / destAspect);
+          sx = 0;
+          sy = Math.round((vh - sh) / 2);
+        }
+
+        // 2) 按“应用模式”在内部基准方向上绘制
+        if (mode === 'portrait') {
+          // 竖向：直接绘制为 baseW x baseH
+          ctx.drawImage(video, sx, sy, sw, sh, 0, 0, destW, destH);
+        } else {
+          // 横向：将内部基准视口变为“横向认知”，方法一：旋转90度
+          // 这里我们采用：先将目标画布视为横向宽度 destW，且我们需要横向内容
+          // 简单做法：旋转画布坐标系 90°，把长边对齐 X 轴
+          ctx.translate(destW/2, destH/2);
+          ctx.rotate(Math.PI/2); // 顺时针90°
+          // 旋转后，再绘制到 -destH/2..+destH/2 与 -destW/2..+destW/2 区域
+          // 但为了不改变帧尺寸，仍将画面“塞入”原 destW x destH 的像素栅格
+          ctx.drawImage(video, sx, sy, sw, sh, -destH/2, -destW/2, destH, destW);
+        }
+
+        ctx.restore();
 
         try {
           const bitmap = await createImageBitmap(offscreen);
-          worker.postMessage({ type: 'frame', bitmap, width: offscreen.width, height: offscreen.height, orient, timestamp: performance.now() }, [bitmap]);
+          worker.postMessage({
+            type: 'frame',
+            bitmap,
+            width: offscreen.width,
+            height: offscreen.height,
+            mode, // portrait/landscape，供 worker 做方向一致性检查
+            timestamp: performance.now()
+          }, [bitmap]);
         } catch (err) {
-          const imgData = osctx.getImageData(0,0,offscreen.width,offscreen.height);
-          worker.postMessage({ type:'frame-rgb', data: imgData.data.buffer, width: offscreen.width, height: offscreen.height, orient, timestamp: performance.now() }, [imgData.data.buffer]);
+          const imgData = ctx.getImageData(0,0,offscreen.width,offscreen.height);
+          worker.postMessage({
+            type:'frame-rgb',
+            data: imgData.data.buffer,
+            width: offscreen.width,
+            height: offscreen.height,
+            mode,
+            timestamp: performance.now()
+          }, [imgData.data.buffer]);
         }
       }
       requestAnimationFrame(loop);
