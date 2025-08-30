@@ -1,42 +1,61 @@
+/* style.css - 完整版 */
+
+/* 全局样式，移除默认边距并防止页面滚动 */
 body {
     margin: 0;
     padding: 0;
-    overflow: hidden;
-    background-color: #000;
+    overflow: hidden; /* 确保在任何情况下都不会出现滚动条 */
+    background-color: #000; /* 设置一个黑色背景，防止在视频加载时出现白屏 */
 }
 
-#canvas {
+/* * 让 <video> 元素作为主显示画面，并铺满整个屏幕
+ * 这是用户将直接看到的实时摄像头画面 
+ */
+#video {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100vw; /* 使用 vw 和 vh 确保占满视口 */
-    height: 100vh;
-    object-fit: cover; /* 确保视频内容铺满容器，可能会裁剪 */
+    width: 100vw;  /* vw (viewport width) 单位，占满屏幕宽度 */
+    height: 100vh; /* vh (viewport height) 单位，占满屏幕高度 */
+    object-fit: cover; /* 保持视频的宽高比，同时填满整个容器，可能会裁剪掉部分画面 */
+    z-index: 1; /* 将视频置于较低的堆叠层，方便其他元素浮于其上 */
 }
 
-/* 强制隐藏原始的video元素 */
-#video {
-    display: none !important;
+/* * 隐藏 <canvas> 元素
+ * 它现在只在后台的 JavaScript 中用于图像处理和识别，用户不需要看到它 
+ */
+#canvas {
+    display: none;
 }
 
+/* * 状态和分数显示区域的样式
+ * 它会浮现在视频画面的右上角
+ */
 #status-display {
     position: absolute;
     top: 20px;
     right: 20px;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.6); /* 半透明黑色背景，确保文字在任何视频背景下都清晰可读 */
     color: white;
     padding: 10px 15px;
-    border-radius: 8px;
-    font-family: sans-serif;
+    border-radius: 8px; /* 圆角边框 */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; /* 使用现代的系统字体 */
     font-size: 24px;
-    z-index: 10;
+    font-weight: bold;
+    z-index: 10; /* 设置一个较高的堆叠层级，确保它永远在视频上方 */
+    -webkit-backdrop-filter: blur(5px); /* 为支持的浏览器（如Safari）添加毛玻璃效果 */
+    backdrop-filter: blur(5px);
 }
 
+/* "加载中" 信息的样式 */
 #loading-message {
     margin: 0;
+    padding: 0;
 }
 
+/* 分数显示的样式，默认隐藏，直到模型加载完成 */
 #score-display {
     margin: 0;
-    display: none; /* 默认隐藏，加载完成后显示 */
+    padding: 0;
+    display: none;
 }
