@@ -5,9 +5,8 @@ import { Score } from './score.js';
 
 let pipeline = null;
 let scoring = null;
-
-// 应用构图模式：'portrait' | 'landscape'
-let appMode = 'portrait'; // 默认竖屏应用模式
+// 应用模式：portrait | landscape
+let appMode = 'portrait';
 
 async function boot() {
   UI.init(appMode);
@@ -24,9 +23,8 @@ async function boot() {
     backend: 'tfjs',
     modelPath: './model/tfjs/model.json',
     targetFps: 8,
-    getAppMode: () => appMode, // 由UI控制应用构图模式
+    getAppMode: () => appMode,
     onDetections: (items, diag) => {
-      // 注意：items 的 bbox 已映射到当前屏幕坐标，无需再考虑旋转
       scoring.addDetections(items);
       UI.updateScore(scoring.getTotal());
       UI.drawOverlays(items, diag);
