@@ -44,11 +44,10 @@ export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.j
       await new Promise(res => video.addEventListener('loadedmetadata', res, { once: true }));
     }
 
-    const w = 640;
+    const maxDim = 960; // 横屏时给更高的宽度，有利于小字符
+    const isLandscape = video.videoWidth >= video.videoHeight;
+    const w = isLandscape ? maxDim : 640;
     const h = Math.max(1, Math.round((video.videoHeight / video.videoWidth) * w));
-    offscreen = new OffscreenCanvas(w, h);
-    const osctx = offscreen.getContext('2d', { willReadFrequently: true });
-    running = true;
 
     const loop = async (ts) => {
       if (!running) return;
@@ -78,3 +77,4 @@ export function createPipeline({ backend='tfjs', modelPath='./model/tfjs/model.j
 
   return { start, stop, replaceStream, get running() { return running; } };
 }
+
